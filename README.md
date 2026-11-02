@@ -40,7 +40,7 @@ inputs:
   nixpkgs-dx:                 # with `dioxus` only
     url: github:NixOS/nixpkgs/<pins.json nixpkgs-dx.rev>
   devenv-fleet:
-    url: github:FastTrackStudios/devenv-fleet/v0.1.0
+    url: github:FastTrackStudios/devenv-fleet/v0.1.1
     flake: false
 imports:
   - devenv-fleet/rust
@@ -86,9 +86,14 @@ and `devenv-fleet.lib.toolchainFor pkgs` for the toolchain.
   `.cargo/config.toml`'s `-fuse-ld=mold` asks for. Don't set
   `languages.rust.rustflags` or `mold.enable` either: `RUSTFLAGS` replaces
   the fleet's `.cargo/config.toml` rustflags tables.
-- **kache is the host's.** Dev hosts set it as cargo's `build.rustc-wrapper`;
-  THEBATTLESHIP's runners set `RUSTC_WRAPPER`. devenv passes the host env
-  through, so never set or unset `RUSTC_WRAPPER` in a shell.
+- **kache is the host's.** When `kache` is on PATH and `RUSTC_WRAPPER` is
+  unset, the `rust` module's shell exports `RUSTC_WRAPPER` as kache's path.
+  A host that sets `RUSTC_WRAPPER` itself (THEBATTLESHIP's runners) or kache
+  as cargo's `build.rustc-wrapper` keeps its own. Never unset
+  `RUSTC_WRAPPER` in a shell.
+- **One cargo-hakari.** `pins.json` pins it (`cargo-hakari.version`); the
+  `rust` module fails to evaluate if the pinned nixpkgs carries another. CI
+  installs that version (`taiki-e/install-action` with `cargo-hakari@<version>`).
 - **Extra Rust targets change the rustc path.** `fleet.rust.extraTargets`
   belongs in a profile (`profiles.mobile.module`), not the default shell.
 - **The OTLP env goes to processes only.** Merge

@@ -14,6 +14,12 @@ let
   prek = pkgs.callPackage ../pkgs/prek.nix { };
   cargo-rail = pkgs.callPackage ../pkgs/cargo-rail.nix { inherit toolchain; };
   # Only the default target set has a pinned path.
+  # One hakari for every repo: it writes the workspace-hack section differently
+  # per version, so CI installs this version and the shell must carry it.
+  hakari =
+    assert lib.assertMsg (pkgs.cargo-hakari.version == pins.cargo-hakari.version)
+      "devenv-fleet: nixpkgs has cargo-hakari ${pkgs.cargo-hakari.version}, pins.json pins ${pins.cargo-hakari.version}";
+    pkgs.cargo-hakari;
   expected = if cfg.extraTargets == [ ] then pins.rust.toolchain.${pkgs.stdenv.system} or "" else "";
 in
 {
@@ -65,12 +71,12 @@ in
     # rust-analyzer finds no stdlib sources for a custom toolchainPackage.
     env.RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
 
-    # kache is host-provided and passes through: `build.rustc-wrapper` in
-    # ~/.cargo/config.toml or /etc/kache/cargo-config.toml on dev hosts,
-    # RUSTC_WRAPPER (and KACHE_*) on THEBATTLESHIP's runner units. Nothing
-    # here sets or unsets RUSTC_WRAPPER, CARGO_HOME or CARGO_TARGET_DIR.
+    # kache is host-provided. When the host put it on PATH and set no
+    # RUSTC_WRAPPER (runner units set their own, with KACHE_*), the shell
+    # exports it, so a user needs no ~/.cargo/config.toml entry. Nothing
+    # here unsets RUSTC_WRAPPER or sets CARGO_HOME or CARGO_TARGET_DIR.
     packages = [
-      pkgs.cargo-hakari
+      hakari
       pkgs.just
       pkgs.pkg-config
       prek
@@ -97,6 +103,9 @@ in
     # Quiet unless a person is at a terminal: direnv, agents, scripts and CI
     # get nothing on stdout. No version commands, no network.
     enterShell = ''
+      if [ -z "''${RUSTC_WRAPPER:-}" ] && kache=$(command -v kache); then
+        export RUSTC_WRAPPER="$kache"
+      fi
       if [ -t 1 ] && [ -t 2 ] && [[ $- == *i* ]] && [ -z "''${CI:-}" ] && [ -z "''${CLAUDECODE:-}" ]; then
         echo "devenv-fleet: rust ${pins.rust.version}, mold, kache via ''${RUSTC_WRAPPER:-cargo config}"
         ${lib.optionalString (config.fleet.banner != "") "printf '%s\\n' ${lib.escapeShellArg config.fleet.banner}"}
