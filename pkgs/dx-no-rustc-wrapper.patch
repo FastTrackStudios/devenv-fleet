@@ -1,0 +1,25 @@
+dx: DX_NO_RUSTC_WRAPPER=1 skips the rustc workspace wrapper for base builds.
+
+Studio's patch (studio:nix/modules/dx-no-rustc-wrapper.patch, from
+DioxusLabs/dioxus a82361ef1) rebased onto Brahmastra-Labs/dioxus 19ea842,
+where the CLI is the workspace member packages/cli.
+
+--- a/packages/cli/src/build/request.rs
++++ b/packages/cli/src/build/request.rs
+@@ -1662,6 +1662,16 @@
+                     .args(args)
+                     .envs(env.iter().map(|(k, v)| (k.as_ref(), v)));
+ 
++                // Only fat builds feed hot-patching: the args a base build captures are never
++                // read back (`load_rustc_argset` reads the fat scope). `DX_NO_RUSTC_WRAPPER=1`
++                // lets a base build run plain cargo, so an outer RUSTC_WRAPPER (sccache, kache)
++                // caches workspace crates and they share artifacts with plain `cargo build`.
++                if matches!(build_mode, BuildMode::Base)
++                    && std::env::var_os("DX_NO_RUSTC_WRAPPER").is_some_and(|v| v == "1")
++                {
++                    return Ok(cmd);
++                }
++
+                 // Set the folder where dx will write its captured rustc args for replay.
+                 // Use the scoped directory so different build configurations (triples,
+                 // profiles, etc.) don't collide.

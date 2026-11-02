@@ -1,0 +1,8 @@
+# The fleet's linux table (architect's .cargo/config.toml), so the smoke
+# binary links the way every fleet repo does.
+[target.x86_64-unknown-linux-gnu]
+rustflags = [
+  "-C", "force-frame-pointers=yes",
+  "-C", "link-arg=-fuse-ld=mold",
+  "-C", "target-cpu=x86-64-v3",
+]

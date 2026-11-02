@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# fleet-pins: keep a repo's devenv inputs on devenv-fleet's pins.json.
+#
+#   fleet-pins [DIR]                     check DIR (default: .) against pins.json
+#   fleet-pins --write [--ref REF] [DIR] rewrite DIR/devenv.yaml's pinned inputs,
+#                                        then `devenv update` the lock
+#
+# The pinned inputs are `nixpkgs`, `rust-overlay` and `nixpkgs-dx` (when the
+# repo declares it), each at pins.json's revision, and `devenv-fleet` at REF:
+# by default the tag this checkout of devenv-fleet is at, else its commit.
+# Check mode reads devenv.lock too, and flake.lock when the repo has one, and
+# exits 1 on any revision that disagrees. Run it from a devenv-fleet checkout
+# at the tag you want (rolling back is `--write --ref <older tag>`).
+set -euo pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+pins="$here/pins.json"
+write=0
+ref=""
+dir="."
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --write) write=1 ;;
+    --ref) ref="${2:?--ref needs a tag or commit}"; shift ;;
+    -h|--help) sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) echo "fleet-pins: unknown option $1" >&2; exit 2 ;;
+    *) dir="$1" ;;
+  esac
+  shift
+done
+command -v jq >/dev/null || { echo "fleet-pins: needs jq" >&2; exit 2; }
+yaml="$dir/devenv.yaml"
+if [ ! -f "$yaml" ]; then
+  [ "$write" = 0 ] && [ -f "$dir/flake.lock" ] || { echo "fleet-pins: no devenv.yaml in $dir" >&2; exit 2; }
+  yaml=/dev/null
+fi
+
+pin() { jq -r --arg n "$1" '.[$n] | "github:\(.owner)/\(.repo)/\(.rev)"' "$pins"; }
+rev() { jq -r --arg n "$1" '.[$n].rev' "$pins"; }
+
+# The url of input $1 in devenv.yaml (inputs: <name>: url: ...).
+yaml_url() {
+  awk -v want="$1" '
+    /^inputs:/ { inputs = 1; next }
+    inputs && /^[^ #]/ { inputs = 0 }
+    inputs && /^  [A-Za-z0-9_-]+:/ { name = $1; sub(":", "", name); next }
+    inputs && name == want && /^    url:/ { print $2; exit }
+  ' "$yaml"
+}
+
+# Rewrite input $1's url to $2, in place.
+set_url() {
+  awk -v want="$1" -v url="$2" '
+    /^inputs:/ { inputs = 1; print; next }
+    inputs && /^[^ #]/ { inputs = 0 }
+    inputs && /^  [A-Za-z0-9_-]+:/ { name = $1; sub(":", "", name) }
+    inputs && name == want && /^    url:/ { print "    url: " url; next }
+    { print }
+  ' "$yaml" > "$yaml.tmp" && mv "$yaml.tmp" "$yaml"
+}
+
+inputs=(nixpkgs rust-overlay nixpkgs-dx)
+
+if [ "$write" = 1 ]; then
+  if [ -z "$ref" ]; then
+    ref=$(git -C "$here" describe --tags --exact-match 2>/dev/null || git -C "$here" rev-parse HEAD)
+  fi
+  fleet_url="github:FastTrackStudios/devenv-fleet/$ref"
+  for n in "${inputs[@]}"; do
+    [ -n "$(yaml_url "$n")" ] && set_url "$n" "$(pin "$n")"
+  done
+  [ -n "$(yaml_url devenv-fleet)" ] && set_url devenv-fleet "$fleet_url"
+  (cd "$dir" && devenv update)
+  echo "fleet-pins: $yaml on $(rev nixpkgs | cut -c1-8) / devenv-fleet $ref"
+  exit 0
+fi
+
+bad=0
+check() { # <what> <have> <want>
+  if [ "$2" != "$3" ]; then
+    echo "fleet-pins: $1 is ${2:-missing}, pins.json says $3" >&2
+    bad=1
+  fi
+}
+for n in "${inputs[@]}"; do
+  have=$(yaml_url "$n")
+  [ -n "$have" ] || continue
+  check "devenv.yaml $n" "$have" "$(pin "$n")"
+  if [ -f "$dir/devenv.lock" ]; then
+    check "devenv.lock $n" "$(jq -r --arg n "$n" '.nodes[.nodes.root.inputs[$n]].locked.rev // empty' "$dir/devenv.lock")" "$(rev "$n")"
+  fi
+done
+if [ -f "$dir/flake.lock" ]; then
+  for n in nixpkgs rust-overlay; do
+    have=$(jq -r --arg n "$n" '
+      .nodes.root.inputs[$n] as $i
+      | (if ($i | type) == "array" then .nodes[$i[0]].inputs[$i[1]] else $i end) as $k
+      | .nodes[$k].locked.rev // empty' "$dir/flake.lock")
+    [ -n "$have" ] && check "flake.lock $n" "$have" "$(rev "$n")"
+  done
+fi
+[ "$bad" = 0 ] && echo "fleet-pins: $dir matches pins.json"
+exit "$bad"

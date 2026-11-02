@@ -1,0 +1,42 @@
+{
+  "nixpkgs": {
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "8ce4ef6cb6f871616146b9fe26d2a5ae594e94fe"
+  },
+  "rust-overlay": {
+    "owner": "oxalica",
+    "repo": "rust-overlay",
+    "rev": "5b9f1198b59bcb31c5c3250b332e7d77590e6306"
+  },
+  "nixpkgs-dx": {
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "d99b013d5d1931ad77fe3912ed218170dec5d9a4"
+  },
+  "rust": {
+    "version": "1.99.1",
+    "toolchain": {
+      "x86_64-linux": "/nix/store/50x4m6r9zc0j2iz5cr6ppsac04z057zf-rust-default-1.99.1"
+    }
+  },
+  "dx": {
+    "version": "0.8.0-alpha.0",
+    "owner": "Brahmastra-Labs",
+    "repo": "dioxus",
+    "rev": "19ea84261d3feab7c2015d7b5eab2c8514bc2e5c",
+    "hash": "sha256-eEbQokzRBTOkHiMloKC85yIpMY8J+rds0ILxZt4oa5I=",
+    "cargoHash": "sha256-ySPcW+fE/rcx8zolmKaYvMVKoWvwse68T5qOlIcv5Jk="
+  },
+  "devenv": {
+    "version": "2.4.0",
+    "nixpkgs": "e62746b0b472753ef019baceab6f1e2e52014980"
+  },
+  "teley": {
+    "owner": "logaretm",
+    "repo": "teley",
+    "rev": "f1c3c2ff52db0a855b25dbb11a7cde7e6a4dbfd8",
+    "hash": "sha256-Tu/XrVPM+eGQI1pqRvrxKEAzUf7+dWJpYL1oUO92KZo=",
+    "pnpmDepsHash": "sha256-ZU3xlLJxDbr3k/y+As0XN9amhA/dx92LMghdJVb8Iks="
+  }
+}
