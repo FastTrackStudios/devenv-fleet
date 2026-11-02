@@ -20,6 +20,9 @@
       "x86_64-linux": "/nix/store/50x4m6r9zc0j2iz5cr6ppsac04z057zf-rust-default-1.99.1"
     }
   },
+  "cargo-hakari": {
+    "version": "0.9.38"
+  },
   "dx": {
     "version": "0.8.0-alpha.0",
     "owner": "Brahmastra-Labs",

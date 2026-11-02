@@ -35,6 +35,12 @@ YAML
 cd "$work"
 git init -q
 devenv shell -- fleet-doctor
+# kache on PATH becomes RUSTC_WRAPPER; a host's own RUSTC_WRAPPER wins.
+mkdir "$work/bin" && printf '#!/bin/sh\nexec "$@"\n' > "$work/bin/kache" && chmod +x "$work/bin/kache"
+got=$(env -u RUSTC_WRAPPER PATH="$work/bin:$PATH" devenv shell -- sh -c 'echo "$RUSTC_WRAPPER"' | tail -1)
+[ "$got" = "$work/bin/kache" ] || { echo "smoke: RUSTC_WRAPPER is '$got', want $work/bin/kache" >&2; exit 1; }
+got=$(RUSTC_WRAPPER=/host/wrapper PATH="$work/bin:$PATH" devenv shell -- sh -c 'echo "$RUSTC_WRAPPER"' | tail -1)
+[ "$got" = /host/wrapper ] || { echo "smoke: host RUSTC_WRAPPER overridden: '$got'" >&2; exit 1; }
 devenv shell -- cargo build -q
 comment=$(readelf -p .comment target/debug/fleet-smoke)
 echo "$comment" | grep -q 'mold' || { echo "smoke: not linked by mold:"; echo "$comment"; exit 1; } >&2
