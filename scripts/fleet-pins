@@ -66,11 +66,15 @@ if [ "$write" = 1 ]; then
     ref=$(git -C "$here" describe --tags --exact-match 2>/dev/null || git -C "$here" rev-parse HEAD)
   fi
   fleet_url="github:FastTrackStudios/devenv-fleet/$ref"
-  for n in "${inputs[@]}"; do
-    [ -n "$(yaml_url "$n")" ] && set_url "$n" "$(pin "$n")"
+  # Only the inputs written here are re-locked: a bare `devenv update`
+  # would also move the lock's unpinned inputs (devenv's own modules).
+  changed=()
+  for n in "${inputs[@]}" devenv-fleet; do
+    [ -n "$(yaml_url "$n")" ] || continue
+    if [ "$n" = devenv-fleet ]; then set_url "$n" "$fleet_url"; else set_url "$n" "$(pin "$n")"; fi
+    changed+=("$n")
   done
-  [ -n "$(yaml_url devenv-fleet)" ] && set_url devenv-fleet "$fleet_url"
-  (cd "$dir" && devenv update)
+  for n in "${changed[@]}"; do (cd "$dir" && devenv update "$n"); done
   echo "fleet-pins: $yaml on $(rev nixpkgs | cut -c1-8) / devenv-fleet $ref"
   exit 0
 fi
