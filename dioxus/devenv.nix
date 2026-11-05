@@ -47,10 +47,17 @@ in
 
     # Unwrapped clang for C in wasm crates (ring): the nix cc-wrapper injects
     # hardening flags wasm32 rejects and leaks glibc headers. Builtin headers
-    # come from the wrapper's resource-root. darwin/ replaces CC with a
+    # come from the unwrapped clang's lib output. darwin/ replaces CC with a
     # DYLD-clean wrapper.
     env.CC_wasm32_unknown_unknown = lib.mkDefault "${pkgs.llvmPackages_18.clang-unwrapped}/bin/clang";
     env.AR_wasm32_unknown_unknown = "${pkgs.llvmPackages_18.bintools-unwrapped}/bin/llvm-ar";
-    env.CFLAGS_wasm32_unknown_unknown = "-isystem ${pkgs.llvmPackages_18.clang}/resource-root/include";
+    # The builtin headers from the unwrapped clang's lib output, not the
+    # cc-wrapper's resource-root: the wrapper pulls in compiler-rt, which
+    # nix builds from source on macOS, and LLVM 18's compiler-rt does not
+    # build against the Apple SDK's libc++ 21 (`__builtin_ctzg`). That broke
+    # every dev shell with this module on the Macs.
+    env.CFLAGS_wasm32_unknown_unknown =
+      let clang = pkgs.llvmPackages_18.clang-unwrapped;
+      in "-isystem ${clang.lib}/lib/clang/${lib.versions.major clang.version}/include";
   };
 }
