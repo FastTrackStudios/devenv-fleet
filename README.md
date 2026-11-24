@@ -11,7 +11,7 @@ Written for devenv **2.4.0**.
 |---|---|
 | `rust` | The fleet toolchain (`lib/toolchain.nix`: rust-overlay's `rust-bin.stable."1.99.1"` with rust-src, rust-analyzer, clippy, rustfmt and wasm32), mold as the linker, cargo-hakari, prek, cargo-rail, just, `RUST_SRC_PATH`, a `fleet-doctor` script, and prek's hooks in repos with a `prek.toml` |
 | `dioxus` | The fleet's one dx (the Brahmastra-Labs fork plus `pkgs/dx-no-rustc-wrapper.patch`, `DX_NO_RUSTC_WRAPPER=1`), binaryen, wasm-bindgen-cli, tailwindcss and the wasm32 C toolchain |
-| `telemetry` | `devenv up` runs a local Teley on :8787 (the room in `~/.teley/session.json`, which Claude's Teley MCP subscribes to) and an OpenTelemetry Collector on :4318 that batches and forwards to it |
+| `telemetry` | `devenv up` runs OpenObserve on :5080 (traces, logs and metrics on disk, SQL over HTTP, a UI; login in `~/.config/openobserve/credentials.json`) and an OpenTelemetry Collector on :4318 that drops library noise and quick clean traces and sends to OpenObserve and a rotating file (`~/.local/state/otelcol/`). Teley is opt-in (`fleet.telemetry.teley.enable`) |
 | `darwin` | iOS and macOS: xcrun linker wrappers, `IPHONEOS_DEPLOYMENT_TARGET`, `DYLD_LIBRARY_PATH`. Inert on Linux |
 
 `pins.json` is the one source of truth for the revisions: nixpkgs,
@@ -26,7 +26,7 @@ A repo's `devenv.yaml`:
 
 ```yaml
 require_version: ">=2.4.0"
-strict_ports: true            # with `telemetry`: 8787 and 4318 never move
+strict_ports: true            # with `telemetry`: 4318 and 5080 never move
 inputs:
   nixpkgs:
     url: github:NixOS/nixpkgs/<pins.json nixpkgs.rev>
