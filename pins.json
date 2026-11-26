@@ -24,12 +24,12 @@
     "version": "0.9.38"
   },
   "dx": {
-    "version": "0.8.0-alpha.0",
-    "owner": "Brahmastra-Labs",
+    "version": "0.8.0-alpha.3",
+    "owner": "DioxusLabs",
     "repo": "dioxus",
-    "rev": "19ea84261d3feab7c2015d7b5eab2c8514bc2e5c",
-    "hash": "sha256-eEbQokzRBTOkHiMloKC85yIpMY8J+rds0ILxZt4oa5I=",
-    "cargoHash": "sha256-ySPcW+fE/rcx8zolmKaYvMVKoWvwse68T5qOlIcv5Jk="
+    "rev": "cb27832398e8a3fa30a0fc8d6917c6d8a86fa71a",
+    "hash": "sha256-+PLcBKjutWMY/LINWTJ0XSOPMpnFCUAKA7v6QYbaTMU=",
+    "cargoHash": "sha256-M86x14bBGQnMD9zMNZskvb6NYw0W2DfMpAurlqw4QrA="
   },
   "devenv": {
     "version": "2.4.0",
